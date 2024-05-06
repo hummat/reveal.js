@@ -8,10 +8,14 @@
 
 		<link rel="stylesheet" href="dist/reset.css">
 		<link rel="stylesheet" href="dist/reveal.css">
-		<link rel="stylesheet" href="dist/theme/black.css">
+		<link rel="stylesheet" href="dist/theme/white.css">
 
 		<!-- Theme used for syntax highlighted code -->
-		<link rel="stylesheet" href="plugin/highlight/monokai.css">
+		<!-- <link rel="stylesheet" href="plugin/highlight/monokai.css" id="highlight-theme"> -->
+		<link rel="stylesheet" href="plugin/highlight/atom-one-dark.css">
+
+		<!-- Styling for pointer plugin -->
+		<link rel="stylesheet" href="plugin/pointer/pointer.css" />
 	</head>
 	<body>
 		<div class="reveal">
@@ -21,19 +25,68 @@
 			</div>
 		</div>
 
+		<!-- reveal.js -->
 		<script src="dist/reveal.js"></script>
+		<script src="plugin/zoom/zoom.js"></script>
 		<script src="plugin/notes/notes.js"></script>
+		<script src="plugin/search/search.js"></script>
 		<script src="plugin/markdown/markdown.js"></script>
 		<script src="plugin/highlight/highlight.js"></script>
+		<script src="plugin/math/math.js"></script>
+		<script src="plugin/pointer/pointer.js"></script>
 		<script>
 			// More info about initialization & config:
 			// - https://revealjs.com/initialization/
 			// - https://revealjs.com/config/
 			Reveal.initialize({
+				// Add the current slide number to the URL hash so that reloading the
+				// page/copying the URL will return you to the same slide
 				hash: true,
+				// controls: true,
+				// progress: true,
+				// history: true,
+				// center: true,
+				slideNumber: "c/t", // current/total
+				transitionSpeed: "fast",
+			        // width: 2560,
+				// height: 1440,
+				// margin: 0.05,
+				// viewDistance: 1,
+				// pdfSeparateFragments: false,
+
+				// Learn more about pointer plugin: https://github.com/burnpiro/reveal-pointer
+				pointer: {
+					key: "q", // key to enable pointer, default "q", not case-sensitive
+					color: "#FF6692", // color of a cursor, default "red" any valid CSS color
+					pointerSize: 10, // pointer size in px, default 12
+					alwaysVisible: false, // should pointer mode be always visible? default "false"
+					tailLength: 10, // NOT IMPLEMENTED YET!!! how long the "tail" should be? default 10
+				},
 
 				// Learn about plugins: https://revealjs.com/plugins/
-				plugins: [ RevealMarkdown, RevealHighlight, RevealNotes ]
+				plugins: [
+					RevealZoom,
+					RevealNotes,
+					RevealSearch,
+					RevealMarkdown,
+					RevealHighlight,
+					RevealMath.KaTeX,
+					RevealPointer
+				]
+			});
+		</script>
+
+		<!-- custom -->
+		<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+		<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+
+		<script>
+			$(function () {
+				const includes = $("[data-include]");
+				$.each(includes, function () {
+					const file = "assets/figures/" + $(this).data("include") + ".html";
+					$(this).load(file);
+				});
 			});
 		</script>
 	</body>
