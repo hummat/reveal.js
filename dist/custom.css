@@ -1,0 +1,59 @@
+/*********************************************
+ * STYLE
+ *********************************************/
+.reveal h1, h2, h3 { text-transform: capitalize !important; }
+ul > li { margin-bottom: 1em; }
+ul > li > ul > li { margin-bottom: 0.75em; }
+ul > li > ul > li { margin-bottom: 0.5em; }
+
+.cite {
+  font-size: 0.8em;
+  color: #666;
+  text-align: right;
+  display: block;
+}
+
+/*********************************************
+ * PLOTLY
+ *********************************************/
+.js-plotly-plot .plotly .modebar {
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/*********************************************
+ * GRAPHICS
+ *********************************************/
+.arrow {
+  width: 120px;
+}
+
+.line {
+  margin-top: 14px;
+  width: 90px;
+  background: black;
+  height: 10px;
+  float: left;
+}
+
+.point {
+  width: 0;
+  height: 0;
+  border-top: 20px solid transparent;
+  border-bottom: 20px solid transparent;
+  border-left: 30px solid black;
+  float: right;
+}
+
+/*********************************************
+ * IMAGES
+ *********************************************/
+
+.img-hor {
+  -moz-transform: scaleX(-1);
+  -o-transform: scaleX(-1);
+  -webkit-transform: scaleX(-1);
+  transform: scaleX(-1);
+  filter: FlipH;
+  -ms-filter: "FlipH";
+}
