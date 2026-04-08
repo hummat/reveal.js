@@ -1,5 +1,5 @@
-import { queryAll, enterFullscreen } from '../utils/util.js'
-import { isAndroid } from '../utils/device.js'
+import { queryAll, enterFullscreen } from '../utils/util'
+import { isAndroid } from '../utils/device'
 
 /**
  * Manages our presentation controls. This includes both
@@ -66,9 +66,11 @@ export default class Controls {
 	 */
 	configure( config, oldConfig ) {
 
+		const speakerOnly = config.controls === 'speaker' || config.controls === 'speaker-only';
+
 		this.element.style.display = (
 			config.controls &&
-			(config.controls !== 'speaker-only' || this.Reveal.isSpeakerNotes())
+			(!speakerOnly || this.Reveal.isSpeakerNotes())
 		) ? 'block' : 'none';
 
 		this.element.setAttribute( 'data-controls-layout', config.controlsLayout );
