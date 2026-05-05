@@ -2,6 +2,7 @@ import { resolve } from 'path';
 import { ModuleFormat } from 'rollup';
 import { defineConfig } from 'vite';
 import dts from 'vite-plugin-dts';
+import { rewriteLegacyCoreDtsPath } from './build/dts-paths.ts';
 
 export const appendExtension = (format: ModuleFormat, name: String): string => {
 	if (format === 'es') {
@@ -45,7 +46,13 @@ export default defineConfig({
 			insertTypesEntry: true,
 			rollupTypes: false,
 			exclude: ['**/index.ts'],
-			copyDtsFiles: true
+			copyDtsFiles: true,
+			beforeWriteFile(filePath, content) {
+				return {
+					filePath: rewriteLegacyCoreDtsPath(filePath),
+					content,
+				};
+			},
 		}),
 	],
 	css: {

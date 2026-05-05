@@ -1,5 +1,6 @@
 import { resolve } from 'node:path';
 import dts from 'vite-plugin-dts';
+import { rewriteLegacyPluginDtsPath } from '../build/dts-paths.ts';
 
 export function createPluginDts(pluginName: string) {
 	return dts({
@@ -7,15 +8,14 @@ export function createPluginDts(pluginName: string) {
 		entryRoot: 'plugin',
 		outDir: 'dist/plugin',
 		beforeWriteFile(filePath, content) {
-			const normalizedPath = filePath.replace(/\\/g, '/');
-			const generatedPathSuffix = `/dist/plugin/${pluginName}/index.d.ts`;
+			const rewrittenPath = rewriteLegacyPluginDtsPath(filePath, pluginName);
 
-			if (!normalizedPath.endsWith(generatedPathSuffix)) {
+			if (!rewrittenPath) {
 				return false;
 			}
 
 			return {
-				filePath: resolve(process.cwd(), 'dist/plugin', `${pluginName}.d.ts`),
+				filePath: resolve(rewrittenPath),
 				content,
 			};
 		},

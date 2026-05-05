@@ -704,7 +704,10 @@ export default class SlideContent {
 		this.failedAudioPlaybackTargets.clear();
 		this.failedVideoPlaybackTargets.clear();
 		this.failedMutedVideoPlaybackTargets.clear();
-		this.mediaPlayButton.remove();
+
+		if( this.mediaPlayButton && this.mediaPlayButton.parentNode ) {
+			this.mediaPlayButton.remove();
+		}
 
 	}
 

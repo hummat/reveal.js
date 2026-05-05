@@ -185,7 +185,7 @@ var _ = /android/gi.test(h), v = function(e) {
 	}
 }(typeof window > "u" ? null : window);
 //#endregion
-//#region \0@oxc-project+runtime@0.122.0/helpers/typeof.js
+//#region \0@oxc-project+runtime@0.124.0/helpers/typeof.js
 function y(e) {
 	"@babel/helpers - typeof";
 	return y = typeof Symbol == "function" && typeof Symbol.iterator == "symbol" ? function(e) {
@@ -195,7 +195,7 @@ function y(e) {
 	}, y(e);
 }
 //#endregion
-//#region \0@oxc-project+runtime@0.122.0/helpers/toPrimitive.js
+//#region \0@oxc-project+runtime@0.124.0/helpers/toPrimitive.js
 function b(e, t) {
 	if (y(e) != "object" || !e) return e;
 	var n = e[Symbol.toPrimitive];
@@ -207,13 +207,13 @@ function b(e, t) {
 	return (t === "string" ? String : Number)(e);
 }
 //#endregion
-//#region \0@oxc-project+runtime@0.122.0/helpers/toPropertyKey.js
+//#region \0@oxc-project+runtime@0.124.0/helpers/toPropertyKey.js
 function x(e) {
 	var t = b(e, "string");
 	return y(t) == "symbol" ? t : t + "";
 }
 //#endregion
-//#region \0@oxc-project+runtime@0.122.0/helpers/defineProperty.js
+//#region \0@oxc-project+runtime@0.124.0/helpers/defineProperty.js
 function S(e, t, n) {
 	return (t = x(t)) in e ? Object.defineProperty(e, t, {
 		value: n,
@@ -408,7 +408,7 @@ var ee = class {
 		});
 	}
 	clearMediaPlaybackErrors() {
-		this.resetTemporarilyMutedMedia(), this.failedAudioPlaybackTargets.clear(), this.failedVideoPlaybackTargets.clear(), this.failedMutedVideoPlaybackTargets.clear(), this.mediaPlayButton.remove();
+		this.resetTemporarilyMutedMedia(), this.failedAudioPlaybackTargets.clear(), this.failedVideoPlaybackTargets.clear(), this.failedMutedVideoPlaybackTargets.clear(), this.mediaPlayButton && this.mediaPlayButton.parentNode && this.mediaPlayButton.remove();
 	}
 	preventIframeAutoFocus(e) {
 		let t = e.target;
@@ -422,7 +422,7 @@ var ee = class {
 	afterSlideChanged() {
 		this.clearMediaPlaybackErrors();
 	}
-}, C = ".slides section", w = ".slides>section", te = ".slides>section.present>section", T = ".backgrounds>.slide-background", E = /registerPlugin|registerKeyboardShortcut|addKeyBinding|addEventListener|showPreview/, ne = class {
+}, C = ".slides section", w = ".slides>section", te = ".slides>section.present>section", T = ".backgrounds>.slide-background", E = /registerPlugin|registerKeyboardShortcut|addKeyBinding|addEventListener|showPreview|previewIframe/, ne = class {
 	constructor(e) {
 		this.Reveal = e;
 	}
@@ -833,7 +833,7 @@ var ee = class {
 	}
 }, k = 500, A = 4, se = 6, j = 8, ce = class {
 	constructor(e) {
-		this.Reveal = e, this.active = !1, this.activatedCallbacks = [], this.onScroll = this.onScroll.bind(this);
+		this.Reveal = e, this.active = !1, this.activeProgressBarPage = null, this.activeProgressBarTrigger = null, this.activatedCallbacks = [], this.onScroll = this.onScroll.bind(this);
 	}
 	activate() {
 		if (this.active) return;
@@ -866,7 +866,7 @@ var ee = class {
 	deactivate() {
 		if (!this.active) return;
 		let e = this.Reveal.getState();
-		this.active = !1, this.viewportElement.removeEventListener("scroll", this.onScroll), this.viewportElement.classList.remove("reveal-scroll"), this.removeProgressBar(), this.Reveal.getSlidesElement().innerHTML = this.slideHTMLBeforeActivation, this.Reveal.sync(), this.Reveal.setState(e), this.slideHTMLBeforeActivation = null;
+		this.active = !1, this.viewportElement.removeEventListener("scroll", this.onScroll), this.viewportElement.classList.remove("reveal-scroll"), this.pendingScrollRaf && (cancelAnimationFrame(this.pendingScrollRaf), this.pendingScrollRaf = 0), this.removeProgressBar(), this.Reveal.getSlidesElement().innerHTML = this.slideHTMLBeforeActivation, this.Reveal.sync(), this.Reveal.setState(e), this.slideHTMLBeforeActivation = null;
 	}
 	toggle(e) {
 		typeof e == "boolean" ? e ? this.activate() : this.deactivate() : this.isActive() ? this.deactivate() : this.activate();
@@ -887,7 +887,7 @@ var ee = class {
 		});
 	}
 	removeProgressBar() {
-		this.progressBar && (this.progressBar.remove(), this.progressBar = null);
+		this.progressBar && (this.progressBar.remove(), this.progressBar = null), this.activeProgressBarPage = null, this.activeProgressBarTrigger = null;
 	}
 	layout() {
 		this.isActive() && (this.syncPages(), this.syncScrollPosition());
@@ -958,33 +958,41 @@ var ee = class {
 		return e.scrollTriggers = [], e.indexh = parseInt(e.slideElement.getAttribute("data-index-h"), 10), e.indexv = parseInt(e.slideElement.getAttribute("data-index-v"), 10), e;
 	}
 	syncProgressBar() {
-		this.progressBarInner.querySelectorAll(".scrollbar-slide").forEach((e) => e.remove());
+		this.progressBarInner.querySelectorAll(".scrollbar-slide").forEach((e) => e.remove()), this.activeProgressBarPage = null, this.activeProgressBarTrigger = null, this.getAllPages().forEach((e) => {
+			e.progressBarSlide = null, e.scrollTriggers.forEach((e) => e.progressBarElement = null);
+		});
 		let e = this.viewportElement.scrollHeight, t = this.viewportElement.offsetHeight, n = t / e;
 		this.progressBarHeight = this.progressBarInner.offsetHeight, this.playheadHeight = Math.max(n * this.progressBarHeight, j), this.progressBarScrollableHeight = this.progressBarHeight - this.playheadHeight;
 		let r = t / e * this.progressBarHeight, i = Math.min(r / 8, A);
-		this.progressBarPlayhead.style.height = this.playheadHeight - i + "px", r > se ? this.slideTriggers.forEach((e) => {
+		this.progressBarPlayhead.style.height = this.playheadHeight - i + "px", r > se && this.slideTriggers.forEach((e) => {
 			let { page: t } = e;
-			t.progressBarSlide = document.createElement("div"), t.progressBarSlide.className = "scrollbar-slide", t.progressBarSlide.style.top = e.range[0] * this.progressBarHeight + "px", t.progressBarSlide.style.height = (e.range[1] - e.range[0]) * this.progressBarHeight - i + "px", t.progressBarSlide.classList.toggle("has-triggers", t.scrollTriggers.length > 0), this.progressBarInner.appendChild(t.progressBarSlide), t.scrollTriggerElements = t.scrollTriggers.map((n, r) => {
+			t.progressBarSlide = document.createElement("div"), t.progressBarSlide.className = "scrollbar-slide", t.progressBarSlide.style.top = e.range[0] * this.progressBarHeight + "px", t.progressBarSlide.style.height = (e.range[1] - e.range[0]) * this.progressBarHeight - i + "px", t.progressBarSlide.classList.toggle("has-triggers", t.scrollTriggers.length > 0), this.progressBarInner.appendChild(t.progressBarSlide), t.scrollTriggers.forEach((n, r) => {
 				let a = document.createElement("div");
-				return a.className = "scrollbar-trigger", a.style.top = (n.range[0] - e.range[0]) * this.progressBarHeight + "px", a.style.height = (n.range[1] - n.range[0]) * this.progressBarHeight - i + "px", t.progressBarSlide.appendChild(a), r === 0 && (a.style.display = "none"), a;
+				a.className = "scrollbar-trigger", a.style.top = (n.range[0] - e.range[0]) * this.progressBarHeight + "px", a.style.height = (n.range[1] - n.range[0]) * this.progressBarHeight - i + "px", t.progressBarSlide.appendChild(a), r === 0 && (a.style.display = "none"), n.progressBarElement = a;
 			});
-		}) : this.pages.forEach((e) => e.progressBarSlide = null);
+		});
 	}
 	syncScrollPosition() {
-		let e = this.viewportElement.offsetHeight, t = e / this.viewportElement.scrollHeight, n = this.viewportElement.scrollTop, r = this.viewportElement.scrollHeight - e, i = Math.max(Math.min(n / r, 1), 0), a = Math.max(Math.min((n + e / 2) / this.viewportElement.scrollHeight, 1), 0), o;
+		let e = this.viewportElement.offsetHeight, t = e / this.viewportElement.scrollHeight, n = this.viewportElement.scrollTop, r = this.viewportElement.scrollHeight - e, i = Math.max(Math.min(n / r, 1), 0), a = Math.max(Math.min((n + e / 2) / this.viewportElement.scrollHeight, 1), 0), o, s = null;
 		this.slideTriggers.forEach((e) => {
 			let { page: n } = e;
 			i >= e.range[0] - t * 2 && i <= e.range[1] + t * 2 && !n.loaded ? (n.loaded = !0, this.Reveal.slideContent.load(n.slideElement)) : n.loaded && (n.loaded = !1, this.Reveal.slideContent.unload(n.slideElement)), i >= e.range[0] && i <= e.range[1] ? (this.activateTrigger(e), o = e.page) : e.active && this.deactivateTrigger(e);
 		}), o && o.scrollTriggers.forEach((e) => {
-			a >= e.range[0] && a <= e.range[1] ? this.activateTrigger(e) : e.active && this.deactivateTrigger(e);
-		}), this.setProgressBarValue(n / (this.viewportElement.scrollHeight - e));
+			a >= e.range[0] && a <= e.range[1] ? (this.activateTrigger(e), s = e) : e.active && this.deactivateTrigger(e);
+		}), this.setProgressBarValue(n / (this.viewportElement.scrollHeight - e), o, s);
 	}
-	setProgressBarValue(e) {
-		this.progressBar && (this.progressBarPlayhead.style.transform = `translateY(${e * this.progressBarScrollableHeight}px)`, this.getAllPages().filter((e) => e.progressBarSlide).forEach((e) => {
-			e.progressBarSlide.classList.toggle("active", e.active === !0), e.scrollTriggers.forEach((t, n) => {
-				e.scrollTriggerElements[n].classList.toggle("active", e.active === !0 && t.active === !0);
-			});
-		}), this.showProgressBar());
+	setProgressBarValue(e, t = null, n = null) {
+		if (this.progressBar) {
+			if (this.progressBarPlayhead.style.transform = `translateY(${e * this.progressBarScrollableHeight}px)`, this.activeProgressBarPage !== t) {
+				var r, i;
+				(r = this.activeProgressBarPage) == null || (r = r.progressBarSlide) == null || r.classList.remove("active"), t == null || (i = t.progressBarSlide) == null || i.classList.add("active"), this.activeProgressBarPage = t;
+			}
+			if (this.activeProgressBarTrigger !== n) {
+				var a, o;
+				(a = this.activeProgressBarTrigger) == null || (a = a.progressBarElement) == null || a.classList.remove("active"), n == null || (o = n.progressBarElement) == null || o.classList.add("active"), this.activeProgressBarTrigger = n;
+			}
+			this.showProgressBar();
+		}
 	}
 	showProgressBar() {
 		this.progressBar.classList.add("visible"), clearTimeout(this.hideProgressBarTimeout), this.Reveal.getConfig().scrollProgress === "auto" && !this.draggingProgressBar && (this.hideProgressBarTimeout = setTimeout(() => {
@@ -992,17 +1000,20 @@ var ee = class {
 		}, k));
 	}
 	prev() {
-		this.viewportElement.scrollTop -= this.scrollTriggerHeight;
+		this.viewportElement.scrollTop -= this.scrollTriggerHeight, this.syncProgrammaticScroll();
 	}
 	next() {
-		this.viewportElement.scrollTop += this.scrollTriggerHeight;
+		this.viewportElement.scrollTop += this.scrollTriggerHeight, this.syncProgrammaticScroll();
 	}
 	scrollToSlide(e) {
 		if (!this.active) this.activatedCallbacks.push(() => this.scrollToSlide(e));
 		else {
 			let t = this.getScrollTriggerBySlide(e);
-			t && (this.viewportElement.scrollTop = t.range[0] * (this.viewportElement.scrollHeight - this.viewportElement.offsetHeight));
+			t && (this.viewportElement.scrollTop = t.range[0] * (this.viewportElement.scrollHeight - this.viewportElement.offsetHeight), this.syncProgrammaticScroll());
 		}
+	}
+	syncProgrammaticScroll() {
+		this.pendingScrollRaf && (cancelAnimationFrame(this.pendingScrollRaf), this.pendingScrollRaf = 0), this.syncScrollPosition(), this.storeScrollPosition();
 	}
 	storeScrollPosition() {
 		clearTimeout(this.storeScrollPositionTimeout), this.storeScrollPositionTimeout = setTimeout(() => {
@@ -1042,14 +1053,16 @@ var ee = class {
 		return this.pages.flatMap((e) => [e, ...e.autoAnimatePages || []]);
 	}
 	onScroll() {
-		this.syncScrollPosition(), this.storeScrollPosition();
+		this.pendingScrollRaf || (this.pendingScrollRaf = requestAnimationFrame(() => {
+			this.pendingScrollRaf = 0, this.syncScrollPosition(), this.storeScrollPosition();
+		}));
 	}
 	get viewportElement() {
 		return this.Reveal.getViewportElement();
 	}
 };
 //#endregion
-//#region \0@oxc-project+runtime@0.122.0/helpers/asyncToGenerator.js
+//#region \0@oxc-project+runtime@0.124.0/helpers/asyncToGenerator.js
 function M(e, t, n, r, i, a, o) {
 	try {
 		var s = e[a](o), c = s.value;
@@ -1431,7 +1444,7 @@ var le = class {
 	}
 };
 //#endregion
-//#region \0@oxc-project+runtime@0.122.0/helpers/objectSpread2.js
+//#region \0@oxc-project+runtime@0.124.0/helpers/objectSpread2.js
 function P(e, t) {
 	var n = Object.keys(e);
 	if (Object.getOwnPropertySymbols) {
@@ -1509,7 +1522,7 @@ var pe = class {
 		let i = this.Reveal.getIndices(e);
 		if (this.Reveal.getConfig().fragmentInURL || (i.f = void 0), typeof r == "string" && r.length) t = "/" + r, i.f >= 0 && (t += "/" + i.f);
 		else {
-			let e = this.Reveal.getConfig().hashOneBasedIndex ? 1 : 0;
+			let e = +!!this.Reveal.getConfig().hashOneBasedIndex;
 			(i.h > 0 || i.v > 0 || i.f >= 0) && (t += i.h + e), (i.v > 0 || i.f >= 0) && (t += "/" + (i.v + e)), i.f >= 0 && (t += "/" + i.f);
 		}
 		return t;
@@ -1896,17 +1909,17 @@ var pe = class {
 	destroy() {
 		this.close();
 	}
-}, I = 40, be = class {
+}, I = 40, L = 1.03, be = class {
 	constructor(e) {
-		this.Reveal = e, this.touchStartX = 0, this.touchStartY = 0, this.touchStartCount = 0, this.touchCaptured = !1, this.onPointerDown = this.onPointerDown.bind(this), this.onPointerMove = this.onPointerMove.bind(this), this.onPointerUp = this.onPointerUp.bind(this), this.onTouchStart = this.onTouchStart.bind(this), this.onTouchMove = this.onTouchMove.bind(this), this.onTouchEnd = this.onTouchEnd.bind(this);
+		this.Reveal = e, this.touchStartX = 0, this.touchStartY = 0, this.touchStartCount = 0, this.touchCaptured = !1, this.activePointers = /* @__PURE__ */ new Map(), this.onPointerDown = this.onPointerDown.bind(this), this.onPointerMove = this.onPointerMove.bind(this), this.onPointerUp = this.onPointerUp.bind(this), this.onPointerCancel = this.onPointerCancel.bind(this), this.onTouchStart = this.onTouchStart.bind(this), this.onTouchMove = this.onTouchMove.bind(this), this.onTouchEnd = this.onTouchEnd.bind(this);
 	}
 	bind() {
 		let e = this.Reveal.getRevealElement();
-		"onpointerdown" in window ? (e.addEventListener("pointerdown", this.onPointerDown, !1), e.addEventListener("pointermove", this.onPointerMove, !1), e.addEventListener("pointerup", this.onPointerUp, !1)) : window.navigator.msPointerEnabled ? (e.addEventListener("MSPointerDown", this.onPointerDown, !1), e.addEventListener("MSPointerMove", this.onPointerMove, !1), e.addEventListener("MSPointerUp", this.onPointerUp, !1)) : (e.addEventListener("touchstart", this.onTouchStart, !1), e.addEventListener("touchmove", this.onTouchMove, !1), e.addEventListener("touchend", this.onTouchEnd, !1));
+		"onpointerdown" in window ? (e.addEventListener("pointerdown", this.onPointerDown, !1), e.addEventListener("pointermove", this.onPointerMove, !1), e.addEventListener("pointerup", this.onPointerUp, !1), e.addEventListener("pointercancel", this.onPointerCancel, !1)) : (e.addEventListener("touchstart", this.onTouchStart, !1), e.addEventListener("touchmove", this.onTouchMove, !1), e.addEventListener("touchend", this.onTouchEnd, !1));
 	}
 	unbind() {
 		let e = this.Reveal.getRevealElement();
-		e.removeEventListener("pointerdown", this.onPointerDown, !1), e.removeEventListener("pointermove", this.onPointerMove, !1), e.removeEventListener("pointerup", this.onPointerUp, !1), e.removeEventListener("MSPointerDown", this.onPointerDown, !1), e.removeEventListener("MSPointerMove", this.onPointerMove, !1), e.removeEventListener("MSPointerUp", this.onPointerUp, !1), e.removeEventListener("touchstart", this.onTouchStart, !1), e.removeEventListener("touchmove", this.onTouchMove, !1), e.removeEventListener("touchend", this.onTouchEnd, !1);
+		e.removeEventListener("pointerdown", this.onPointerDown, !1), e.removeEventListener("pointermove", this.onPointerMove, !1), e.removeEventListener("pointerup", this.onPointerUp, !1), e.removeEventListener("pointercancel", this.onPointerCancel, !1), e.removeEventListener("touchstart", this.onTouchStart, !1), e.removeEventListener("touchmove", this.onTouchMove, !1), e.removeEventListener("touchend", this.onTouchEnd, !1);
 	}
 	isSwipePrevented(e) {
 		if (a(e, "video[controls], audio[controls]")) return !0;
@@ -1916,12 +1929,17 @@ var pe = class {
 		}
 		return !1;
 	}
+	isViewportZoomed() {
+		if (!window.visualViewport || typeof window.visualViewport.scale != "number") return !1;
+		let e = window.visualViewport.scale;
+		return this.visualViewportBaseScale === void 0 ? this.visualViewportBaseScale = e : this.visualViewportBaseScale = Math.min(this.visualViewportBaseScale, e), e / this.visualViewportBaseScale > L;
+	}
 	onTouchStart(e) {
-		if (this.touchCaptured = !1, this.isSwipePrevented(e.target)) return !0;
+		if (this.touchCaptured = !1, this.isViewportZoomed() || this.isSwipePrevented(e.target)) return !0;
 		this.touchStartX = e.touches[0].clientX, this.touchStartY = e.touches[0].clientY, this.touchStartCount = e.touches.length;
 	}
 	onTouchMove(e) {
-		if (this.isSwipePrevented(e.target)) return !0;
+		if (this.isViewportZoomed() || this.isSwipePrevented(e.target)) return !0;
 		let t = this.Reveal.getConfig();
 		if (this.touchCaptured) _ && e.preventDefault();
 		else {
@@ -1936,25 +1954,25 @@ var pe = class {
 	onTouchEnd(e) {
 		this.touchCaptured && !this.Reveal.slideContent.isAllowedToPlayAudio() && this.Reveal.startEmbeddedContent(this.Reveal.getCurrentSlide()), this.touchCaptured = !1;
 	}
-	onPointerDown(e) {
-		(e.pointerType === e.MSPOINTER_TYPE_TOUCH || e.pointerType === "touch") && (e.touches = [{
+	getActiveTouches() {
+		return Array.from(this.activePointers.values(), (e) => ({
 			clientX: e.clientX,
 			clientY: e.clientY
-		}], this.onTouchStart(e));
+		}));
+	}
+	onPointerDown(e) {
+		e.pointerType === "touch" && (this.activePointers.set(e.pointerId, e), e.touches = this.getActiveTouches(), this.onTouchStart(e));
 	}
 	onPointerMove(e) {
-		(e.pointerType === e.MSPOINTER_TYPE_TOUCH || e.pointerType === "touch") && (e.touches = [{
-			clientX: e.clientX,
-			clientY: e.clientY
-		}], this.onTouchMove(e));
+		e.pointerType === "touch" && (this.activePointers.set(e.pointerId, e), e.touches = this.getActiveTouches(), this.onTouchMove(e));
 	}
 	onPointerUp(e) {
-		(e.pointerType === e.MSPOINTER_TYPE_TOUCH || e.pointerType === "touch") && (e.touches = [{
-			clientX: e.clientX,
-			clientY: e.clientY
-		}], this.onTouchEnd(e));
+		e.pointerType === "touch" && (this.activePointers.delete(e.pointerId), e.touches = this.getActiveTouches(), this.onTouchEnd(e));
 	}
-}, L = "focus", R = "blur", xe = class {
+	onPointerCancel(e) {
+		e.pointerType === "touch" && (this.activePointers.delete(e.pointerId), e.touches = this.getActiveTouches(), this.onTouchEnd(e));
+	}
+}, R = "focus", z = "blur", xe = class {
 	constructor(e) {
 		this.Reveal = e, this.onRevealPointerDown = this.onRevealPointerDown.bind(this), this.onDocumentPointerDown = this.onDocumentPointerDown.bind(this);
 	}
@@ -1968,13 +1986,13 @@ var pe = class {
 		this.Reveal.getRevealElement().removeEventListener("pointerdown", this.onRevealPointerDown, !1), document.removeEventListener("pointerdown", this.onDocumentPointerDown, !1);
 	}
 	focus() {
-		this.state !== L && (this.Reveal.getRevealElement().classList.add("focused"), document.addEventListener("pointerdown", this.onDocumentPointerDown, !1)), this.state = L;
+		this.state !== R && (this.Reveal.getRevealElement().classList.add("focused"), document.addEventListener("pointerdown", this.onDocumentPointerDown, !1)), this.state = R;
 	}
 	blur() {
-		this.state !== R && (this.Reveal.getRevealElement().classList.remove("focused"), document.removeEventListener("pointerdown", this.onDocumentPointerDown, !1)), this.state = R;
+		this.state !== z && (this.Reveal.getRevealElement().classList.remove("focused"), document.removeEventListener("pointerdown", this.onDocumentPointerDown, !1)), this.state = z;
 	}
 	isFocused() {
-		return this.state === L;
+		return this.state === R;
 	}
 	destroy() {
 		this.Reveal.getRevealElement().classList.remove("focused");
@@ -2133,10 +2151,10 @@ var pe = class {
 	pdfPageHeightOffset: -1,
 	dependencies: [],
 	plugins: []
-}, Te = "6.0.0";
+}, Te = "6.0.1";
 //#endregion
 //#region js/reveal.js
-function z(a, s) {
+function B(a, s) {
 	arguments.length < 2 && (s = arguments[0], a = document.querySelector(".reveal"));
 	let l = {}, f = {}, p = !1, m = !1, h, _, v, y, b = {
 		hasNavigatedHorizontally: !1,
@@ -2289,12 +2307,13 @@ function z(a, s) {
 			if (!f.disableLayout) {
 				g && !f.embedded && document.documentElement.style.setProperty("--vh", window.innerHeight * .01 + "px");
 				let n = L.isActive() ? Qe(e, t) : Qe(), r = S;
-				Xe(f.width, f.height), D.slides.style.width = n.width + "px", D.slides.style.height = n.height + "px", S = Math.min(n.presentationWidth / n.width, n.presentationHeight / n.height), S = Math.max(S, f.minScale), S = Math.min(S, f.maxScale), S === 1 || L.isActive() ? (D.slides.style.zoom = "", D.slides.style.left = "", D.slides.style.top = "", D.slides.style.bottom = "", D.slides.style.right = "", qe({ layout: "" })) : (D.slides.style.zoom = "", D.slides.style.left = "50%", D.slides.style.top = "50%", D.slides.style.bottom = "auto", D.slides.style.right = "auto", qe({ layout: "translate(-50%, -50%) scale(" + S + ")" }));
-				let i = Array.from(D.wrapper.querySelectorAll(C));
+				Xe(f.width, f.height), D.slides.style.width = n.width + "px", D.slides.style.height = n.height + "px", S = Math.min(n.presentationWidth / n.width, n.presentationHeight / n.height), S = Math.max(S, f.minScale), S = Math.min(S, f.maxScale), S = Math.round(S * 100) / 100, S === 1 || L.isActive() ? (D.slides.style.zoom = "", D.slides.style.left = "", D.slides.style.top = "", D.slides.style.bottom = "", D.slides.style.right = "", qe({ layout: "" })) : (D.slides.style.zoom = "", D.slides.style.left = "50%", D.slides.style.top = "50%", D.slides.style.bottom = "auto", D.slides.style.right = "auto", qe({ layout: "translate(-50%, -50%) scale(" + S + ")" }));
+				let i = Array.from(D.wrapper.querySelectorAll(C)).filter((e) => e.style.display !== "none"), a = Array(i.length);
 				for (let e = 0, t = i.length; e < t; e++) {
 					let t = i[e];
-					t.style.display !== "none" && (f.center || t.classList.contains("center") ? t.classList.contains("stack") ? t.style.top = 0 : t.style.top = Math.max((n.height - t.scrollHeight) / 2, 0) + "px" : t.style.top = "");
+					f.center || t.classList.contains("center") ? t.classList.contains("stack") ? a[e] = 0 : a[e] = Math.max((n.height - t.scrollHeight) / 2, 0) + "px" : a[e] = "";
 				}
+				for (let e = 0, t = i.length; e < t; e++) i[e].style.top = a[e];
 				r !== S && Y({
 					type: "resize",
 					data: {
@@ -2856,11 +2875,11 @@ function z(a, s) {
 }
 //#endregion
 //#region js/index.ts
-var B = z, V = [];
-B.initialize = (e) => {
+var V = B, H = [];
+V.initialize = (e) => {
 	let t = document.querySelector(".reveal");
 	if (!(t instanceof HTMLElement)) throw Error("Unable to find presentation root (<div class=\"reveal\">).");
-	return Object.assign(B, new z(t, e)), V.map((e) => e(B)), B.initialize();
+	return Object.assign(V, new B(t, e)), H.map((e) => e(V)), V.initialize();
 }, [
 	"configure",
 	"on",
@@ -2869,9 +2888,9 @@ B.initialize = (e) => {
 	"removeEventListener",
 	"registerPlugin"
 ].forEach((e) => {
-	B[e] = (...t) => {
-		V.push((n) => n[e].call(null, ...t));
+	V[e] = (...t) => {
+		H.push((n) => n[e].call(null, ...t));
 	};
-}), B.isReady = () => !1, B.VERSION = Te;
+}), V.isReady = () => !1, V.VERSION = Te;
 //#endregion
-export { B as default };
+export { V as default };

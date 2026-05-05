@@ -5,7 +5,7 @@ export const HORIZONTAL_BACKGROUNDS_SELECTOR = '.backgrounds>.slide-background';
 
 // Methods that may not be invoked via the postMessage API
 export const POST_MESSAGE_METHOD_BLACKLIST =
-	/registerPlugin|registerKeyboardShortcut|addKeyBinding|addEventListener|showPreview/;
+	/registerPlugin|registerKeyboardShortcut|addKeyBinding|addEventListener|showPreview|previewIframe/;
 
 // Regex for retrieving the fragment style from a class attribute
 export const FRAGMENT_STYLE_REGEX =
