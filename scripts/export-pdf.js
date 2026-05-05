@@ -99,6 +99,48 @@ const buildUrl = ( baseUrl, input ) => {
 	return url.href;
 };
 
+const installPrintDelayHook = async ( page ) => {
+	await page.evaluateOnNewDocument( () => {
+		if( !window.location.search.includes( 'print-pdf' ) ) return;
+
+		const waitForAnimationFrames = async ( count ) => {
+			for( let i = 0; i < count; i++ ) {
+				await new Promise( requestAnimationFrame );
+			}
+		};
+
+		const waitForLegacyIncludes = async () => {
+			const startedAt = Date.now();
+			while( Date.now() - startedAt < 30000 ) {
+				const includes = [ ...document.querySelectorAll( '[data-include]' ) ];
+				const loaded = includes.every( include =>
+					include.children.length > 0 || include.textContent.trim().length > 0
+				);
+				if( loaded ) return;
+				await new Promise( resolve => setTimeout( resolve, 50 ) );
+			}
+			throw new Error( 'Timed out waiting for legacy data-include fragments' );
+		};
+
+		const nativeAddEventListener = window.addEventListener.bind( window );
+		window.addEventListener = ( type, listener, options ) => {
+			if( type !== 'load' || typeof listener !== 'function' ) {
+				return nativeAddEventListener( type, listener, options );
+			}
+
+			return nativeAddEventListener( type, async event => {
+				window.__revealPdfLegacyReady = ( async () => {
+					await waitForLegacyIncludes();
+					await waitForAnimationFrames( 2 );
+				} )();
+
+				await window.__revealPdfLegacyReady;
+				listener.call( window, event );
+			}, options );
+		};
+	} );
+};
+
 const contentTypes = {
 	'.css': 'text/css; charset=utf-8',
 	'.gif': 'image/gif',
@@ -127,6 +169,9 @@ const startServer = ( options ) => new Promise( ( resolvePromise, reject ) => {
 			const pathname = decodeURIComponent( requestUrl.pathname );
 			const relativePath = pathname === '/' ? options.input : pathname.slice( 1 );
 			let file = resolve( root, relativePath );
+			const legacyFigureFile = relativePath.startsWith( 'assets/figures/' ) ?
+				resolve( root, 'assets', relativePath.slice( 'assets/figures/'.length ) ) :
+				null;
 			const fallbackFile = resolve( defaultRoot, relativePath );
 
 			if( file !== root && !file.startsWith( root + sep ) ) {
@@ -136,7 +181,10 @@ const startServer = ( options ) => new Promise( ( resolvePromise, reject ) => {
 			}
 
 			if( !existsSync( file ) || !statSync( file ).isFile() ) {
-				if(
+				if( legacyFigureFile && existsSync( legacyFigureFile ) && statSync( legacyFigureFile ).isFile() ) {
+					file = legacyFigureFile;
+				}
+				else if(
 					fallbackFile !== defaultRoot &&
 					fallbackFile.startsWith( defaultRoot + sep ) &&
 					existsSync( fallbackFile ) &&
@@ -182,20 +230,108 @@ const waitForDeck = async ( page, timeout ) => {
 		{ timeout }
 	);
 
-	await Promise.race( [
-		page.evaluate( () => {
-			if( window.deckReadyForPdf !== undefined ) {
-				return Promise.resolve( window.deckReadyForPdf );
+	const hasDeckReadyForPdf = await page.evaluate( () => window.deckReadyForPdf !== undefined );
+	if( hasDeckReadyForPdf ) {
+		await Promise.race( [
+			page.evaluate( () => Promise.resolve( window.deckReadyForPdf ) ),
+			new Promise( ( _, reject ) => {
+				setTimeout(
+					() => reject( new Error( 'Timed out waiting for window.deckReadyForPdf' ) ),
+					timeout
+				);
+			} )
+		] );
+		return;
+	}
+
+	await page.waitForFunction( () => {
+		const includes = [ ...document.querySelectorAll( '[data-include]' ) ];
+		return includes.every( include =>
+			include.children.length > 0 || include.textContent.trim().length > 0
+		);
+	}, { timeout } );
+
+	await page.waitForSelector( '.pdf-page', { timeout } );
+
+	await page.waitForFunction( () => {
+		const plots = [
+			...document.querySelectorAll( '.js-plotly-plot, .plotly-graph-div' )
+		];
+		return plots.every( plot =>
+			plot.querySelector( '.main-svg' ) || plot.querySelector( 'canvas' ) || plot._fullLayout
+		);
+	}, { timeout } );
+
+	await page.evaluate( async () => {
+		if( window.Reveal?.getConfig?.().pdfSeparateFragments === false ) {
+			document.querySelectorAll( '.fragment' ).forEach( fragment => {
+				fragment.classList.add( 'visible' );
+				fragment.classList.remove( 'current-fragment' );
+			} );
+			window.Reveal?.sync?.();
+			window.Reveal?.layout?.();
+		}
+
+		if( window.Plotly ) {
+			document.querySelectorAll( '[data-include]' ).forEach( include => {
+				const parent = include.parentElement;
+				if( parent && parent.children.length === 1 ) {
+					include.style.width = '100%';
+				}
+			} );
+
+			document.querySelectorAll( '.js-plotly-plot, .plotly-graph-div' ).forEach( plot => {
+				const include = plot.closest( '[data-include]' );
+				const includeRect = include?.getBoundingClientRect?.();
+				const stretchRect = plot.closest( '.r-stretch' )?.getBoundingClientRect?.();
+
+				if( includeRect?.width > 0 ) {
+					plot.style.width = `${includeRect.width}px`;
+				}
+
+				const height = includeRect?.height > 100 ?
+					includeRect.height :
+					stretchRect?.height;
+				if( height > 100 ) {
+					plot.style.height = `${height}px`;
+				}
+
+				const rect = plot.getBoundingClientRect();
+				if( rect.width > 0 && rect.height > 0 ) {
+					Plotly.Plots.resize( plot );
+				}
+			} );
+
+			await new Promise( resolve => setTimeout( resolve, 500 ) );
+
+			for( const plot of document.querySelectorAll( '.js-plotly-plot, .plotly-graph-div' ) ) {
+				const rect = plot.getBoundingClientRect();
+				if( rect.width <= 0 || rect.height <= 0 || !window.Plotly.toImage ) continue;
+
+				try {
+					const src = await Plotly.toImage( plot, {
+						format: 'png',
+						width: Math.ceil( rect.width ),
+						height: Math.ceil( rect.height ),
+						scale: 2
+					} );
+					const image = document.createElement( 'img' );
+					image.src = src;
+					image.style.width = `${rect.width}px`;
+					image.style.height = `${rect.height}px`;
+					image.style.objectFit = 'contain';
+					image.style.display = 'block';
+					plot.replaceWith( image );
+					await image.decode?.();
+				}
+				catch( error ) {
+					console.warn( 'Unable to rasterize Plotly figure for PDF export', error );
+				}
 			}
-			return true;
-		} ),
-		new Promise( ( _, reject ) => {
-			setTimeout(
-				() => reject( new Error( 'Timed out waiting for window.deckReadyForPdf' ) ),
-				timeout
-			);
-		} )
-	] );
+		}
+		await new Promise( requestAnimationFrame );
+		await new Promise( requestAnimationFrame );
+	} );
 };
 
 const exportPdf = async ( options ) => {
@@ -226,6 +362,7 @@ const exportPdf = async ( options ) => {
 
 		const page = await browser.newPage();
 		page.setDefaultTimeout( options.timeout );
+		await installPrintDelayHook( page );
 		await page.setViewport( { width: options.width, height: options.height } );
 		await page.goto( url, { waitUntil: 'load', timeout: options.timeout } );
 		await waitForDeck( page, options.timeout );
