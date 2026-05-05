@@ -204,32 +204,31 @@ rendered PDF:
 
 ## Render recipes
 
-Render the deck to PDF via Playwright (more reproducible than Chrome's UI
+Render the deck to PDF via Puppeteer (more reproducible than Chrome's UI
 print dialog):
 
-```python
-from playwright.sync_api import sync_playwright
-
-SLIDE_W, SLIDE_H = 1920, 1080
-PAGE_W, PAGE_H = int(SLIDE_W * 1.05), int(SLIDE_H * 1.05)  # reveal margin
-
-with sync_playwright() as p:
-    b = p.chromium.launch(executable_path="/usr/bin/chromium", headless=True)
-    ctx = b.new_context(viewport={"width": SLIDE_W, "height": SLIDE_H})
-    page = ctx.new_page()
-    page.goto("http://localhost:8000/index.html?print-pdf",
-              wait_until="networkidle", timeout=60000)
-    page.wait_for_timeout(4000)  # let async includes + Plotly.resize settle
-    page.emulate_media(media="print")
-    page.pdf(
-        path="deck.pdf",
-        width=f"{PAGE_W}px",
-        height=f"{PAGE_H}px",
-        print_background=True,
-        margin={"top": "0", "bottom": "0", "left": "0", "right": "0"},
-    )
-    b.close()
+```bash
+npm run export-pdf -- \
+  --root ../3dv-2026-presentation \
+  --input index.html \
+  --output /tmp/3dv-2026-presentation.pdf
 ```
+
+For decks with async charts, figures, includes, or custom widgets, expose a
+readiness promise before `Reveal.initialize()`:
+
+```js
+window.deckReadyForPdf = new Promise((resolve, reject) => {
+  // Resolve only after async includes have loaded and responsive widgets have
+  // non-zero layout in print-pdf mode. Reject on timeout or load failure.
+});
+```
+
+The exporter waits for `Reveal.isReady()` and then waits for
+`window.deckReadyForPdf` when it exists. If the promise is absent, it exports
+after reveal.js reports ready. Use `--wait <ms>` only as a last-resort buffer;
+fixed sleeps are brittle and should not be the primary synchronization
+mechanism.
 
 The `?print-pdf` query string is what triggers reveal.js's print-mode DOM
 restructuring. Without it you get the interactive layout rendered once.
