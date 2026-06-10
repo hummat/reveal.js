@@ -646,7 +646,7 @@ export default class ScrollView {
 				page.loaded = true;
 				this.Reveal.slideContent.load( page.slideElement );
 			}
-			else if( page.loaded ) {
+			else if( !shouldPreload && page.loaded ) {
 				page.loaded = false;
 				this.Reveal.slideContent.unload( page.slideElement );
 			}
